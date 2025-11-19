@@ -28,19 +28,25 @@ git clone <repository-url>
 cd ClaudeWebScraper
 ```
 
-2. Install dependencies:
+2. Copy the example environment file and provide your Apify credentials:
+```bash
+cp .env.example .env
+```
+Update `.env` with your `APIFY_TOKEN`. You can optionally override `APIFY_WEB_SCRAPER_ACTOR_ID` if you want to run a different actor.
+
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Install Playwright browsers:
+4. Install Playwright browsers:
 ```bash
 playwright install chromium
 ```
 
 ## Usage
 
-Run the scraper:
+Run the native Playwright scraper:
 ```bash
 python netsuite_scraper.py
 ```
@@ -57,6 +63,27 @@ python netsuite_scraper.py
 4. Results will be saved to `netsuite_records.json`
 5. The complete JSON output will also be printed to the console
 6. Debug files (HTML snapshots, link lists) will be saved to `debug/` folder
+
+### Using the Apify Web Scraper actor
+
+You can also trigger the hosted [Apify Web Scraper actor](https://apify.com/apify/web-scraper) directly. This is useful when you want to reuse Apify's infrastructure while keeping the same data flow.
+
+```bash
+python apify_web_scraper.py \
+  --start-url https://example.com \
+  --max-requests 10 \
+  --output apify_results.json
+```
+
+Key options:
+
+- `--start-url` (repeatable): Entry points for the crawl.
+- `--max-requests`: Stop after crawling the specified number of pages.
+- `--pseudo-url`: Limit which links are followed by providing [Apify pseudo URLs](https://docs.apify.com/platform/actors/development/actor-definition/pseudo-urls).
+- `--proxy-country`: Optional two-letter country code for the Apify proxy pool.
+- `--output`: Save the resulting dataset items as JSON.
+
+The script reads `APIFY_TOKEN` and `APIFY_WEB_SCRAPER_ACTOR_ID` from your environment and returns the dataset items produced by the run.
 
 ## Output Format
 
