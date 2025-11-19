@@ -13,7 +13,7 @@ A Python web scraper that extracts field information from the NetSuite Records B
   - Required status
   - Help text
 - Outputs data as structured JSON
-- Handles authentication with manual login support
+- Debug mode with detailed logging and HTML export
 
 ## Prerequisites
 
@@ -49,13 +49,14 @@ python netsuite_scraper.py
 
 1. A Chrome browser window will open
 2. The script will navigate to the NetSuite Records Browser
-3. **You have 30 seconds to log in** if authentication is required
-4. The scraper will then:
+3. The scraper will:
    - Extract all record type links from the left navigation
    - Visit each record page
    - Extract the Fields table data
-5. Results will be saved to `netsuite_records.json`
-6. The complete JSON output will also be printed to the console
+   - Display detailed progress and debug information
+4. Results will be saved to `netsuite_records.json`
+5. The complete JSON output will also be printed to the console
+6. Debug files (HTML snapshots, link lists) will be saved to `debug/` folder
 
 ## Output Format
 
@@ -84,20 +85,32 @@ The scraper generates a JSON array with the following structure:
 
 You can modify the following in `netsuite_scraper.py`:
 
+- `DEBUG = True`: Enable/disable debug mode (saves HTML and detailed logs)
 - `start_url`: The starting page URL
-- Authentication wait time: Change `time.sleep(30)` to adjust login wait time
 - Request delays: Modify `time.sleep(0.5)` between page requests
-- Headless mode: Set `headless=True` in `browser.launch()` (not recommended if auth is required)
+- Headless mode: Set `headless=True` in `browser.launch()` to run without visible browser
+
+## Debugging
+
+When debug mode is enabled (`DEBUG = True`), the scraper saves:
+
+- `debug/page_source.html`: HTML of the starting page
+- `debug/found_links.txt`: List of all discovered record links
+- `debug/record_0_*.html`: HTML of first few record pages
+
+Use these files to troubleshoot if the scraper isn't finding links or extracting data correctly.
 
 ## Troubleshooting
 
-### Authentication Issues
-- Ensure you log in within the 30-second window
-- Increase the wait time if needed: change `time.sleep(30)` to a larger value
+### No Links Found
+- Check `debug/page_source.html` to see if the page loaded correctly
+- Look for navigation menu structure in the HTML
+- The scraper tries multiple strategies to find links
 
-### Missing Fields
-- Check if the page structure has changed
-- Verify the Fields table exists on the record pages
+### No Data Extracted
+- Check `debug/record_0_*.html` files to see the structure of record pages
+- Look for the "Fields" heading and table structure
+- Console output shows what headings and tables were found
 
 ### Connection Errors
 - Ensure you have access to the NetSuite documentation
@@ -109,7 +122,10 @@ You can modify the following in `netsuite_scraper.py`:
 - The scraper only follows links in the left navigation menu
 - It does not crawl the entire site
 - Small delays are included between requests to be respectful to the server
-- The browser runs in non-headless mode by default to allow authentication
+- The browser runs in non-headless mode by default for visibility
+- Debug mode is enabled by default to help troubleshoot any issues
+- The scraper uses multiple strategies to find navigation links
+- Detailed progress information is printed to the console
 
 ## License
 

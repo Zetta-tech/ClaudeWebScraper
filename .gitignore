@@ -40,6 +40,9 @@ env/
 netsuite_records.json
 *.json
 
+# Debug files
+debug/
+
 # Playwright
 .playwright/
 
