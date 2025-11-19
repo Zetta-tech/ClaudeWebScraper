@@ -9,6 +9,7 @@ for all record types.
 import json
 import time
 import os
+import re
 from playwright.sync_api import sync_playwright, Page
 from bs4 import BeautifulSoup
 
@@ -138,10 +139,42 @@ def get_record_links(page: Page, start_url: str):
     # Try multiple strategies to find navigation links
     record_links = set()
 
-    # Strategy 1: Look for all links with '/record/' in href
-    print("\n[Strategy 1] Searching for all links with '/record/' in href...")
+    # Strategy 1: Look for buttons with onclick handlers (NetSuite uses this pattern)
+    print("\n[Strategy 1] Searching for buttons with onclick handlers...")
+    all_buttons = soup.find_all('button', onclick=True)
+    print(f"  Found {len(all_buttons)} buttons with onclick")
+
+    for button in all_buttons:
+        onclick = button.get('onclick', '')
+        button_text = button.get_text(strip=True)
+        
+        # Extract URL from onclick="window.location.href='...'"
+        match = re.search(r"window\.location\.href='([^']+)'", onclick)
+        if match:
+            href = match.group(1)
+            
+            # Check if it's a record link
+            if '/record/' in href and href.endswith('.html'):
+                # Make absolute URL
+                if href.startswith('http'):
+                    full_url = href
+                elif href.startswith('/'):
+                    base_url = '/'.join(start_url.split('/')[:3])
+                    full_url = base_url + href
+                else:
+                    base_url = '/'.join(start_url.split('/')[:-1])
+                    full_url = base_url + '/' + href
+                
+                record_links.add(full_url)
+                if DEBUG and len(record_links) <= 5:
+                    print(f"    Found: {button_text[:50]} -> {os.path.basename(full_url)}")
+
+    print(f"  Strategy 1 found: {len(record_links)} record links")
+
+    # Strategy 2: Look for all links with '/record/' in href (fallback)
+    print("\n[Strategy 2] Searching for all links with '/record/' in href...")
     all_links = soup.find_all('a', href=True)
-    print(f"  Found {len(all_links)} total links on page")
+    print(f"  Found {len(all_links)} total <a> links on page")
 
     for link in all_links:
         href = link.get('href', '')
@@ -160,44 +193,6 @@ def get_record_links(page: Page, start_url: str):
                 full_url = base_url + '/' + href
 
             record_links.add(full_url)
-            if DEBUG:
-                print(f"    Found: {link_text[:50]} -> {os.path.basename(full_url)}")
-
-    print(f"  Strategy 1 found: {len(record_links)} record links")
-
-    # Strategy 2: Try to find navigation by common class/id patterns
-    print("\n[Strategy 2] Looking for navigation container...")
-    nav_selectors = [
-        ('nav', None),
-        ('aside', None),
-        ('div', {'id': lambda x: x and 'nav' in x.lower()}),
-        ('div', {'class': lambda x: x and any(term in str(x).lower() for term in ['nav', 'sidebar', 'menu', 'toc', 'tree'])}),
-        ('ul', {'class': lambda x: x and any(term in str(x).lower() for term in ['nav', 'menu', 'tree'])}),
-    ]
-
-    for tag, attrs in nav_selectors:
-        if attrs:
-            containers = soup.find_all(tag, attrs)
-        else:
-            containers = soup.find_all(tag)
-
-        if containers:
-            print(f"  Found {len(containers)} <{tag}> elements matching pattern")
-            for container in containers:
-                nav_links = container.find_all('a', href=True)
-                for link in nav_links:
-                    href = link.get('href', '')
-                    if href.endswith('.html') and '/record/' in href:
-                        # Make absolute URL
-                        if href.startswith('http'):
-                            full_url = href
-                        elif href.startswith('/'):
-                            base_url = '/'.join(start_url.split('/')[:3])
-                            full_url = base_url + href
-                        else:
-                            base_url = '/'.join(start_url.split('/')[:-1])
-                            full_url = base_url + '/' + href
-                        record_links.add(full_url)
 
     print(f"  Strategy 2 total found: {len(record_links)} record links")
 
